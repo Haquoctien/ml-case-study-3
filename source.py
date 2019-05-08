@@ -5,6 +5,7 @@ import string
 from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
 
 
 data = pd.read_json('Sarcasm_Headlines_Dataset.json', lines = True)
@@ -37,3 +38,8 @@ model = LogisticRegression(solver = 'saga').fit(trainXvectorized, trainY)
 y_pred = model.predict(testXvectorized)
 model.score(testXvectorized, testY)
 
+# tính accuracy, precision, recall, f1-score 
+accu = metrics.accuracy_score(testY, y_pred)
+prec = metrics.precision_score(testY, y_pred)
+reca = metrics.recall_score(testY, y_pred)
+f1score = metrics.f1_score(testY, y_pred)
