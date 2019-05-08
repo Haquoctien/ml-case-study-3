@@ -8,15 +8,11 @@ from sklearn.linear_model import LogisticRegression
 
 
 data = pd.read_json('Sarcasm_Headlines_Dataset.json', lines = True)
-
 data.drop("article_link", axis = 1, inplace = True)
 
 punctuations = re.compile(f'[{string.punctuation}]')
-
 data['headline'] = data['headline'].replace(punctuations," ").str.lower()
-
 stopWords = set(stopwords.words('english'))
-
 data['headline'] = data['headline'].apply(lambda x: 
     ' '.join(term for term in x.split() if term not in stopWords))
     
