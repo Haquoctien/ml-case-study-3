@@ -40,11 +40,17 @@ model = LogisticRegression(solver='saga').fit(trainXvectorized, trainY)
 y_pred = model.predict(testXvectorized)
 model.score(testXvectorized, testY)
 
+
 # tính accuracy, precision, recall, f1-score
-accu = metrics.accuracy_score(testY, y_pred)
-prec = metrics.precision_score(testY, y_pred)
-reca = metrics.recall_score(testY, y_pred)
-f1score = metrics.f1_score(testY, y_pred)
+def score(y_true, y_pred):
+    accu = metrics.accuracy_score(y_true, y_pred)
+    prec = metrics.precision_score(y_true, y_pred)
+    reca = metrics.recall_score(y_true, y_pred)
+    f1score = metrics.f1_score(y_true, y_pred)
+    return accu, prec, reca, f1score
+
+
+result = score(testY, y_pred)
 
 
 # hàm tính sigmoid
@@ -102,9 +108,35 @@ def predict(X, theta, threshold=0.5):
 
 w = BGD(trainXvectorized, trainY, 0.001, 15000, 1e-12)
 y_pred = predict(add1Col(testXvectorized), w)
-accuTest = metrics.accuracy_score(testY, y_pred)
-precTest = metrics.precision_score(testY, y_pred)
-recaTest = metrics.recall_score(testY, y_pred)
-f1scoreTest = metrics.f1_score(testY, y_pred)
-print(accuTest, precTest, recaTest, f1scoreTest)
-print(accu, prec, reca, f1score)
+print(result)
+print(score(testY, y_pred))
+
+# model KNN
+    
+from sklearn.neighbors import KNeighborsClassifier
+
+KNNmodel = KNeighborsClassifier().fit(trainXvectorized, trainY)
+
+knn_y_pred = KNNmodel.predict(testXvectorized)
+
+print(score(testY,knn_y_pred))
+
+# model Decision Tree
+
+from sklearn.tree import DecisionTreeClassifier
+
+DTmodel = DecisionTreeClassifier().fit(trainXvectorized, trainY)
+
+dt_y_pred = DTmodel.predict(testXvectorized)
+
+print(score(testY,dt_y_pred))
+
+# naive bayes model
+from sklearn.naive_bayes  import BernoulliNB
+
+NBmodel = BernoulliNB().fit(trainXvectorized, trainY)
+
+nb_y_pred = NBmodel.predict(testXvectorized)
+
+print(score(testY, nb_y_pred))
+
