@@ -7,21 +7,19 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from numba import jit
-from scipy.sparse import hstack, csr_matrix
+from scipy.sparse import hstack, csr_matrix, linalg
 
 data = pd.read_json('Sarcasm_Headlines_Dataset.json', lines=True)
 data.drop("article_link", axis=1, inplace=True)
 
 punctuations = re.compile(f'[{string.punctuation}]')
 data['headline'] = data['headline'].replace(punctuations, " ").str.lower()
-stopWords = set(stopwords.words('english'))
-data['headline'] = data['headline'].apply(
-        lambda x: ' '.join(
-                term for term in x.split() if term not in stopWords))
+#stopWords = set(stopwords.words('english'))
+#data['headline'] = data['headline'].apply(
+#        lambda x: ' '.join(
+#                term for term in x.split() if term not in stopWords))
 
 vectorizer = TfidfVectorizer()
-vectorizer.fit(data['headline'])
-dictionary = vectorizer.get_feature_names()
 
 # tách tập train và tập test
 trainData = data[:20000]
@@ -32,12 +30,13 @@ testX = np.array(testData['headline'])
 testY = np.array(testData['is_sarcastic'])
 
 # vector hóa tiêu đề
+vectorizer.fit(trainX)
 trainXvectorized = vectorizer.transform(trainX)
 testXvectorized = vectorizer.transform(testX)
 
 # mô hình
 model = LogisticRegression(solver='saga').fit(trainXvectorized, trainY)
-y_pred = model.predict(testXvectorized)
+y_pred_sklearn = model.predict(testXvectorized)
 model.score(testXvectorized, testY)
 
 
@@ -47,10 +46,10 @@ def score(y_true, y_pred):
     prec = metrics.precision_score(y_true, y_pred)
     reca = metrics.recall_score(y_true, y_pred)
     f1score = metrics.f1_score(y_true, y_pred)
-    return accu, prec, reca, f1score
+    return {'accuracy': accu,'precision': prec,'recall': reca,'f1': f1score}
 
-
-result = score(testY, y_pred)
+print('SkLearn model: ')
+print(score(testY, y_pred_sklearn))
 
 
 # hàm tính sigmoid
@@ -94,7 +93,6 @@ def BGD(x, y, lr, numIter=10000, epsilon=1e-10):
         if abs(E-Enext) < epsilon:
             break
         E = Enext
-        print('iteration #'+str(i)+' E:' + str(E))
     return theta
 
 
@@ -106,37 +104,28 @@ def predict(X, theta, threshold=0.5):
     return np.array(predict_probs(X, theta) >= threshold, dtype=int)
 
 
-w = BGD(trainXvectorized, trainY, 0.001, 15000, 1e-12)
+w = BGD(trainXvectorized, trainY, 0.001, 10000, 1e-12)
 y_pred = predict(add1Col(testXvectorized), w)
-print(result)
+print('BDG Logistic Regression: ')
 print(score(testY, y_pred))
 
-# model KNN
-    
+# model KNN    
 from sklearn.neighbors import KNeighborsClassifier
-
 KNNmodel = KNeighborsClassifier().fit(trainXvectorized, trainY)
-
 knn_y_pred = KNNmodel.predict(testXvectorized)
-
+print('KNN model: ')
 print(score(testY,knn_y_pred))
 
 # model Decision Tree
-
 from sklearn.tree import DecisionTreeClassifier
-
 DTmodel = DecisionTreeClassifier().fit(trainXvectorized, trainY)
-
 dt_y_pred = DTmodel.predict(testXvectorized)
-
+print('Decision Tree model: ')
 print(score(testY,dt_y_pred))
 
 # naive bayes model
 from sklearn.naive_bayes  import BernoulliNB
-
 NBmodel = BernoulliNB().fit(trainXvectorized, trainY)
-
 nb_y_pred = NBmodel.predict(testXvectorized)
-
+print('Naive Bayes model: ')
 print(score(testY, nb_y_pred))
-
