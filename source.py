@@ -22,11 +22,6 @@ vectorizer = TfidfVectorizer().fit(trainX)
 trainXvectorized = vectorizer.transform(trainX)
 testXvectorized = vectorizer.transform(testX)
 
-# normalize
-from sklearn.preprocessing import normalize
-trainXvectorized = normalize(trainXvectorized)
-testXvectorized = normalize(testXvectorized)
-
 # mô hình từ thư viện
 model = LogisticRegression(solver='saga').fit(trainXvectorized, trainY)
 y_pred_sklearn = model.predict(testXvectorized)
