@@ -1,25 +1,13 @@
 import pandas as pd
 import numpy as np
-import re
-import string
-from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from numba import jit
-from scipy.sparse import hstack, csr_matrix, linalg
+from scipy.sparse import hstack
 
+# đọc file
 data = pd.read_json('Sarcasm_Headlines_Dataset.json', lines=True)
-data.drop("article_link", axis=1, inplace=True)
-
-punctuations = re.compile(f'[{string.punctuation}]')
-data['headline'] = data['headline'].replace(punctuations, " ").str.lower()
-#stopWords = set(stopwords.words('english'))
-#data['headline'] = data['headline'].apply(
-#        lambda x: ' '.join(
-#                term for term in x.split() if term not in stopWords))
-
-vectorizer = TfidfVectorizer()
 
 # tách tập train và tập test
 trainData = data[:20000]
@@ -30,17 +18,22 @@ testX = np.array(testData['headline'])
 testY = np.array(testData['is_sarcastic'])
 
 # vector hóa tiêu đề
-vectorizer.fit(trainX)
+vectorizer = TfidfVectorizer().fit(trainX)
 trainXvectorized = vectorizer.transform(trainX)
 testXvectorized = vectorizer.transform(testX)
 
-# mô hình
+# normalize
+from sklearn.preprocessing import normalize
+trainXvectorized = normalize(trainXvectorized)
+testXvectorized = normalize(testXvectorized)
+
+# mô hình từ thư viện
 model = LogisticRegression(solver='saga').fit(trainXvectorized, trainY)
 y_pred_sklearn = model.predict(testXvectorized)
 model.score(testXvectorized, testY)
 
 
-# tính accuracy, precision, recall, f1-score
+# hàm tính accuracy, precision, recall, f1-score
 def score(y_true, y_pred):
     accu = metrics.accuracy_score(y_true, y_pred)
     prec = metrics.precision_score(y_true, y_pred)
@@ -63,13 +56,13 @@ def sigmoid(z):
 def loss(p, y):
     return np.sum(-y * np.log(p) - (1 - y) * np.log(1 - p))
 
-
+@jit
 # hàm thêm cột 1 vào ma trận examples
 def add1Col(x):
     intercept = np.ones((x.shape[0], 1))
     return hstack((intercept, x))
 
-
+# hàm tính momentum
 @jit
 def getMomentum(gradient, vPrev, alpha, gamma=0.9):
     v = gamma*vPrev + alpha/(1-gamma)*gradient
@@ -95,23 +88,23 @@ def BGD(x, y, lr, numIter=10000, epsilon=1e-10):
         E = Enext
     return theta
 
-
+@jit
 def predict_probs(X, theta):
     return sigmoid(X.dot(theta))
 
-
+@jit
 def predict(X, theta, threshold=0.5):
     return np.array(predict_probs(X, theta) >= threshold, dtype=int)
 
 
-w = BGD(trainXvectorized, trainY, 0.001, 10000, 1e-12)
+w = BGD(trainXvectorized, trainY, 0.015, 200)
 y_pred = predict(add1Col(testXvectorized), w)
 print('BDG Logistic Regression: ')
 print(score(testY, y_pred))
 
-# model KNN    
+# model KNN
 from sklearn.neighbors import KNeighborsClassifier
-KNNmodel = KNeighborsClassifier().fit(trainXvectorized, trainY)
+KNNmodel = KNeighborsClassifier(n_neighbors = 7, metric='euclidean').fit(trainXvectorized, trainY)
 knn_y_pred = KNNmodel.predict(testXvectorized)
 print('KNN model: ')
 print(score(testY,knn_y_pred))
